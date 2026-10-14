@@ -2,11 +2,9 @@
 	single linked list merge
 	This problem requires you to merge two ordered singly linked lists into one ordered singly linked list
 */
-// I AM NOT DONE
 
 use std::fmt::{self, Display, Formatter};
 use std::ptr::NonNull;
-use std::vec::*;
 
 #[derive(Debug)]
 struct Node<T> {
@@ -29,13 +27,13 @@ struct LinkedList<T> {
     end: Option<NonNull<Node<T>>>,
 }
 
-impl<T> Default for LinkedList<T> {
+impl<T: PartialOrd> Default for LinkedList<T> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T> LinkedList<T> {
+impl<T: PartialOrd> LinkedList<T> {
     pub fn new() -> Self {
         Self {
             length: 0,
@@ -69,14 +67,50 @@ impl<T> LinkedList<T> {
             },
         }
     }
-	pub fn merge(list_a:LinkedList<T>,list_b:LinkedList<T>) -> Self
-	{
-		//TODO
-		Self {
-            length: 0,
-            start: None,
-            end: None,
-        }
+	pub fn merge(list_a:LinkedList<T>,list_b:LinkedList<T>) -> Self{
+		let mut result = Self::new();
+		let mut a = list_a.start;
+		let mut b = list_b.start;
+
+		// 归并两个有序链表，每次取较小值构造新节点加入 result
+		unsafe {
+			while let (Some(pa), Some(pb)) = (a, b) {
+				let take_a = (*pa.as_ptr()).val <= (*pb.as_ptr()).val;
+				let cur = if take_a {
+					a = (*pa.as_ptr()).next;
+					pa
+				} else {
+					b = (*pb.as_ptr()).next;
+					pb
+				};
+				let val = std::ptr::read(&(*cur.as_ptr()).val);
+				let new_node = Box::new(Node::new(val));
+				let node_ptr = Some(NonNull::new_unchecked(Box::into_raw(new_node)));
+				match result.end {
+					None => result.start = node_ptr,
+					Some(end_ptr) => (*end_ptr.as_ptr()).next = node_ptr,
+				}
+				result.end = node_ptr;
+				result.length += 1;
+			}
+
+			// 处理剩余节点
+			let mut rest = if a.is_some() { a } else { b };
+			while let Some(node) = rest {
+				let val = std::ptr::read(&(*node.as_ptr()).val);
+				let new_node = Box::new(Node::new(val));
+				let node_ptr = Some(NonNull::new_unchecked(Box::into_raw(new_node)));
+				match result.end {
+					None => result.start = node_ptr,
+					Some(end_ptr) => (*end_ptr.as_ptr()).next = node_ptr,
+				}
+				result.end = node_ptr;
+				result.length += 1;
+				rest = (*node.as_ptr()).next;
+			}
+		}
+
+		result
 	}
 }
 
